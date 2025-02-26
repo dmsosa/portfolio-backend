@@ -4,6 +4,9 @@ import { connect } from "mongoose";
 import configObject from "./config/config";
 import { handleErrorDevelopment, handleErrorProduction } from "./helpers/customErrors";
 import errorHandler from "errorhandler";
+import "./middleware/passport"; //initialize passport
+import passport from "passport";
+import { localStrategy } from "./middleware/passport";
 
 const app = express();
 
@@ -14,9 +17,13 @@ const { dbUri } = configObject[ENV];
 const isProd = ENV === "production";
 
 
-
 app.use(express.json())
+passport.use(localStrategy);
+app.use(passport.initialize());
+// app.use(passport.session());
 app.use(routes);
+
+
 
 if (!isProd) {
     app.use(errorHandler);  

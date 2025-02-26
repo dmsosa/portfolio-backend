@@ -2,14 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import Benutzer, { BenutzerDocument } from "../model/benutzer.model";
 import { NotFoundError } from "../helpers/customErrors";
 
-export async function allBenutzer(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-        const benutzer = await Benutzer.find();
-        res.json(benutzer);
-    } catch (error: unknown) {
-        next(error);
-    }
-}
+
 export async function getBenutzer(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
         const { username } = await req.params;

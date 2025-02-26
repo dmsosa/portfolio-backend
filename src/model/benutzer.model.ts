@@ -27,7 +27,7 @@ export interface IBenutzerInfo {
     following: boolean;
 }
 interface BenutzerMethods {
-    validatePassword(password: string): boolean;
+    checkPassword(password: string): boolean;
     setPassword(password: string): void;
     
 }
@@ -105,7 +105,7 @@ benutzerSchema.method('checkPassword', function(password: string) {
         if (err) throw err;
         console.log(hash);
     })
-  return false;
+  return true;
 })
 
 

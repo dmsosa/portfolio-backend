@@ -1,23 +1,20 @@
-import express from "express";
+import express, { Application } from "express";
 import routes from "./routes/routes";
-import { connect } from "mongoose";
-import configObject from "./config/config";
+import helmet from "helmet";
+import { IS_PRODUCTION, PORT } from "./config/secrets";
 import { handleErrorDevelopment, handleErrorProduction } from "./helpers/customErrors";
 import errorHandler from "errorhandler";
-import "./middleware/passport"; //initialize passport
 import passport from "passport";
 import { localStrategy } from "./middleware/passport";
+import logger from "./config/logger";
+import "./database"; //database initialization
+import "./middleware/passport"; //initialize passport
 
-const app = express();
-
-const PORT = process.env.PORT || 3000;
-const ENV = process.env.NODE_ENV || "development";
-const { dbUri } = configObject[ENV];
-
-const isProd = ENV === "production";
+const app: Application = express();
 
 
-app.use(express.json())
+app.use(helmet());
+app.use(express.json());
 passport.use(localStrategy);
 app.use(passport.initialize());
 // app.use(passport.session());
@@ -25,17 +22,17 @@ app.use(routes);
 
 
 
-if (!isProd) {
+if (!IS_PRODUCTION) {
     app.use(errorHandler);  
     app.use(handleErrorDevelopment);
 } else {
     app.use(handleErrorProduction);
 }
 
-connect(dbUri as string).then(() => {
-    app.listen(PORT, () => {
+app.listen(PORT, () => {
+        logger.info('Das API lauft auf http://localhost:' + PORT);
         console.log('Das API lauft auf http://localhost:' + PORT);
-    })
-}).catch((error) => {
-    console.log(error)
+    }).on('error', (error) => {
+    logger.error(error);
+    console.log(error);
 })

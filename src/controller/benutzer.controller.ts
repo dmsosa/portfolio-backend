@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import Benutzer, { BenutzerDocument } from "../model/benutzer.model";
+import Benutzer, { BenutzerDocument } from "../database/models/benutzer.model";
 import { NotFoundError } from "../helpers/customErrors";
 
 

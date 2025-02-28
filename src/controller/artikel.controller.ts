@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
-import Artikel, { ArtikelDocument } from "../model/artikel.model";
+import Artikel, { ArtikelDocument } from "../database/models/artikel.model";
 import { AlreadyExistsError, NotFoundError } from "../helpers/customErrors";
-import Benutzer from "../model/benutzer.model";
+import Benutzer from "../database/models/benutzer.model";
 
 export async function allArtikel(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {

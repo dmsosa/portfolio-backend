@@ -1,12 +1,13 @@
-import credential from "credential";
 import {   Document, Model, model, Schema, Types } from "mongoose";
-import { BenutzerMethods, IBenutzer } from "../../interfaces/benutzer.interfaces";
-
+import { BenutzerMethods, IAuthJSON, IBenutzer, IProfileInfo } from "../../interfaces/benutzer.interfaces";
+import * as jwt from "jsonwebtoken";
+import { JWT_SECRET } from "../../config/secrets";
+import * as crypto from "crypto";
 type BenutzerModel = Model<IBenutzer, object, BenutzerMethods>
 
 export type BenutzerDocument<T = object> = Omit< Document<Types.ObjectId, object, IBenutzer> & { _id: Types.ObjectId; } & IBenutzer & BenutzerMethods,keyof T> | null;
 
-const benutzerSchema = new Schema<IBenutzer, BenutzerModel, BenutzerMethods>({
+export const benutzerSchema = new Schema<IBenutzer, BenutzerModel, BenutzerMethods>({
     username: {
         type: String,
         required: [true, 'darf nicht Null sein!'],
@@ -41,28 +42,17 @@ const benutzerSchema = new Schema<IBenutzer, BenutzerModel, BenutzerMethods>({
     image    : {
         type: Schema.Types.String
     },
-    favorites: [
-        {
-            type: Schema.Types.ObjectId,
-            ref : 'Article'
-        }
-    ],
     following: [
         {
             type: Schema.Types.ObjectId,
             ref : 'User'
         }
     ],
-    password     : {
+    hash     : {
         type: Schema.Types.String,
-        required: [true, 'darf nicht Null sein!'],
-        validate: {
-            validator: async (value: string) => {
-                if (value.length < 2) return false;
-                return true;
-            },
-            message: props => `${props.value} is not a valid password.`,
-        }
+    },
+    salt     : {
+        type: Schema.Types.String,
     },
     role: {
         type: Schema.Types.String,
@@ -71,37 +61,66 @@ const benutzerSchema = new Schema<IBenutzer, BenutzerModel, BenutzerMethods>({
     }
 }, { collection: 'benutzer', timestamps: true });
 
-
-
-benutzerSchema.method('checkPassword', function(password: string) {
-    const pw = credential();
-    pw.hash(password, (err, hash) => {
-        if (err) throw err;
-        console.log(hash);
-    })
-  return true;
+benutzerSchema.method('validatePassword', function(password: string) {
+    const hash = crypto.pbkdf2Sync(password, this.salt, 10000, 512, 'sha512').toString('hex');
+    return this.hash === hash;
 })
-
-//Fur paket 'credential' benutzt wahrend der Cryptieren des Passwort
-type THashObject = {
-    hash: string,
-    salt: string,
-    keyLength: number,
-    hashMethod: string,
-    iterations: number,
-}
-
 benutzerSchema.method('setPassword', function(password: string):void {
-    const pw = credential();
-    
-    pw.hash(password, (err, hash) => {
-        if (err) throw err;
-        const hashedPass: THashObject = JSON.parse(hash);
-        console.log(hashedPass.hash, hashedPass.hashMethod);
-        this.password = hashedPass.hash;
-        this.save();
-    })
+    this.salt = crypto.randomBytes(16).toString('hex');
+    this.hash = crypto.pbkdf2Sync(password, this.salt, 10000, 512, 'sha512').toString('hex');
 })
+
+
+benutzerSchema.method('generateJwt', function(): string {
+
+    const today = new Date();
+    const expiresAt = new Date(today);
+    expiresAt.setDate(today.getDate() + 60);
+
+    return jwt.sign({ 
+        id: this._id,
+        username: this.username,
+        exp: expiresAt.getTime() / 1000,
+    }, JWT_SECRET, { algorithm: 'HS256' });
+})
+
+benutzerSchema.method('toAuthJSON', function(): IAuthJSON {
+    return {
+      username: this.username,
+      email: this.email,
+      image: this.image,
+      bio: this.bio,
+      token: this.generateJwt(),
+    };
+})
+
+benutzerSchema.method('toProfileFor', function(benutzer: BenutzerDocument): IProfileInfo {
+    return {
+        username: this.username,
+        image: this.image,
+        bio: this.bio,
+        following: benutzer ? benutzer.isFollowing(this._id) : false,
+    }
+})
+benutzerSchema.method('isFollowing', function(userId: Types.ObjectId): boolean {
+    return this.following.some((followerId) => followerId.toString() === userId.toString())
+})
+benutzerSchema.method('follow', function(userId: Types.ObjectId): Promise<BenutzerDocument> {
+    if (this.following.indexOf(userId) === -1) {
+        this.following.push(userId);
+    }
+    return this.save({ validateModifiedOnly: true });
+
+})
+benutzerSchema.method('unfollow', async function(userId: Types.ObjectId): Promise<BenutzerDocument> {
+    this.following.remove(userId);
+    return this.save({ validateModifiedOnly: true });
+})
+
+
+
+
+
 
 
 

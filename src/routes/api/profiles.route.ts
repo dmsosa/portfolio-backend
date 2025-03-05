@@ -1,40 +1,48 @@
-// import { NextFunction, Request, Response, Router } from "express";
-// import { deleteBenutzer, putBenutzer } from "../../controller/benutzer.controller";
-// import { authorization } from "../../middleware/authentication";
-// import Benutzer from "../../database/models/benutzer.model";
-// import { CustomRequest } from "../../interfaces/express";
+import { NextFunction, Response, Router } from "express";
+import { authorization } from "../../middleware/authorization";
+import Benutzer from "../../database/models/benutzer.model";
+import { CustomRequest } from "../../interfaces/express";
 
-// const benutzer = Router();
+const profiles = Router();
 
-// benutzer.param("username",  (req: CustomRequest, res: Response, next: NextFunction, username: string) => {
-//     Benutzer.findOne({ username }).then((benutzer) => {
-//         req.profile = benutzer;
-//         return next();
-//     }).catch(next);
-// })
+profiles.param("username",  (req: CustomRequest, res: Response, next: NextFunction, username: string) => {
+    Benutzer.findOne({ username }).then((benutzer) => {
+        req.profile = benutzer;
+        return next();
+    }).catch(next);
+})
 
-// benutzer.get("/:username", authorization.optional, (req: Request, res: Response, next: NextFunction) => {
-//     const { username, password } = req.body;
-//     if (!username) {
-//         throw new FieldError("Benutzer", " username darf nicht null sein");
-//     }
-//     if (!password) {
-//         throw new FieldError("Benutzer", " password darf nicht null sein");
-//     }
-//     passport.authenticate('local', { session: false }, (err: Error, user: IBenutzer, info: object) => {
-//         if (err) {
-//           return next(err);
-//         }
-    
-//         if (user) {
-//             req.user = user;
-//             next();
-//         } else {
-//           return res.status(422).json(info);
-//         }
-//       })(req, res, next);
-// });
-// benutzer.post("/:username/follow", putBenutzer);
-// benutzer.delete("/:username/follow", deleteBenutzer);
+profiles.get("/:username", authorization.optional, (req: CustomRequest, res: Response, next: NextFunction) => {
+    const { auth, profile } = req;
+    if (auth) {
+        Benutzer.findById(auth.id)
+        .then((benutzer) => {
+            return res.json(profile?.toProfileFor(benutzer));
+        })
+        .catch(next);
+    } else {
+        return res.json(profile?.toProfileFor(null));
+    }
+});
+profiles.post("/:username/follow", authorization.required, (req: CustomRequest, res: Response, next: NextFunction) => {
+    const { auth, profile } = req;
+    Benutzer.findById(auth?.id)
+        .then((benutzer) => {
+            return benutzer?.follow(profile?.id).then(() => {
+                return res.json(profile?.toProfileFor(benutzer));
+            })
+        })
+        .catch(next);
+});
+profiles.delete("/:username/follow", authorization.required, (req: CustomRequest, res: Response, next: NextFunction) => {
+    const { auth, profile } = req;
+    Benutzer.findById(auth?.id)
+        .then((benutzer) => {
+            return benutzer?.unfollow(profile?.id).then(() => {
+                return res.json(profile?.toProfileFor(benutzer));
+            })
+        })
+        .catch(next);
+});
 
-// export default benutzer;
+export default profiles;

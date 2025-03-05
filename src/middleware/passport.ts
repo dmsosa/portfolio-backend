@@ -2,15 +2,19 @@ import { Strategy as LocalStrategy } from "passport-local";
 import Benutzer from "../database/models/benutzer.model";
 
 export const localStrategy = new LocalStrategy(function verify(username, password, cb) {
-    Benutzer.findOne({username}).then((benutzer) => {
+    Benutzer
+    .findOne({username})
+    .then((benutzer) => {
         if (!benutzer) {
-            cb(null, false, { message: "Falschen anmelden Daten! "});
-        } else {
-            if (!benutzer.validatePassword(password)) {
-                cb(null, false, { message: "Falschen anmelden Daten! "})
-            }
-            cb(null, benutzer);
+            return cb(null, false, { message: "Falschen anmelden Daten! "});
         }
-    }).catch((err) => cb(err))
+        if (!benutzer.validatePassword(password)) {
+            return cb(null, false, { message: "Falschen anmelden Daten! "});
+        }
+        return cb(null, benutzer );
+
+        
+    })
+    .catch(cb)
 })
 

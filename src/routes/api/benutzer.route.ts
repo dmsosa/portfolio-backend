@@ -4,14 +4,18 @@
 //BenutzerInfo ist ein Interface der Benutzer aber mit ein JWT Token aber kein Followers oder Favorite Artikeln.
 
 import { NextFunction, Request, Response, Router } from "express";
-import { deleteBenutzer, getBenutzer, postBenutzer, putBenutzer } from "../../controller/benutzer.controller";
 
 import passport from "passport";
 import { FieldError } from "../../helpers/customErrors";
-import { IBenutzer } from "../../interfaces/benutzer.interfaces";
-
+import Benutzer, { BenutzerDocument } from "../../database/models/benutzer.model";
+import { authorization } from "../../middleware/authorization";
+import { CustomRequest } from "../../interfaces/express";
 const benutzer = Router();
-benutzer.get("/", getBenutzer);
+benutzer.get("/", authorization.required, (req: CustomRequest, res: Response, next: NextFunction) => {
+    Benutzer.findOne({ _id: req.auth?.id })
+    .then((benutzer) => res.json(benutzer))
+    .catch(next);
+});
 benutzer.post("/login", (req: Request, res: Response, next: NextFunction) => {
     const { username, password } = req.body;
     if (!username) {
@@ -20,25 +24,36 @@ benutzer.post("/login", (req: Request, res: Response, next: NextFunction) => {
     if (!password) {
         throw new FieldError("Benutzer", " password darf nicht null sein");
     }
-    passport.authenticate('local', { session: false }, (err: Error, user: IBenutzer, info: object) => {
+    passport.authenticate('local', { session: false }, (err: Error, benutzer: BenutzerDocument, info: object) => {
         if (err) {
           return next(err);
         }
-    
-        if (user) {
-            req.user = user;
-            next();
+        if (benutzer) {
+          return res.json(benutzer.toAuthJSON());
         } else {
           return res.status(422).json(info);
         }
       })(req, res, next);
 });
 
-benutzer.get("/:user", getBenutzer);
+benutzer.post("/", authorization.optional, (req: CustomRequest, res: Response, next: NextFunction) => {
+  const { username, email, password } = req.body;
+  const bio = "Hallo, ich nutze Dmblog!";
+  const image = "https://static.productionready.io/images/smiley-cyrus.jpg";
+
+  const benutzer: BenutzerDocument = new Benutzer();
+
+  benutzer.username = username;
+  benutzer.email    = email;
+  benutzer.bio   = bio;
+  benutzer.image = image;
+  benutzer.setPassword(password);
 
 
-benutzer.post("/", postBenutzer);
-benutzer.put("/:user", putBenutzer);
-benutzer.delete("/:user", deleteBenutzer);
-
+  return benutzer.save()
+  .then((benutzer) => {
+    res.json(benutzer.toAuthJSON());
+  })
+  .catch(next);
+});
 export default benutzer;

@@ -1,12 +1,13 @@
 import { NextFunction, Request, Response } from "express";
 
-class CustomError extends Error {
+export class CustomError extends Error {
     status: number;
-    constructor(message: string) {
+    constructor(message: string, status: number = 500, name: string = "CustomError") {
         super(message);
-        this.name = this.constructor.name;
-        this.status = 500;
+        this.name = name;
+        this.status = status;
     }
+
 }
 interface ErrorResponse {
     errors: {

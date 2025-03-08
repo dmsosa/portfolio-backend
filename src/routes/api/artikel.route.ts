@@ -23,7 +23,38 @@ artikel.param("slug", (req: CustomRequest, res: Response, next: NextFunction, sl
     })
     .catch(next);
 });
+artikel.get("/",  authorization.optional, (req: CustomRequest, res: Response, next: NextFunction) => {
+    const { auth, query } = req;
+    const ARTIKEL_PRO_SEITE = 3;
+    let limit: number = 5;
+    let offset: number = 0;
 
+    //Benutzer greifen
+
+    if (query.limit) {
+        limit = parseInt(query.limit as string);
+    }
+    if (query.offset) {
+        offset = parseInt(query.offset as string) * ARTIKEL_PRO_SEITE;
+    }
+
+    return Promise.all([ 
+        auth ? Benutzer.findOne({ _id: auth.id }) : null, 
+        Artikel.countDocuments(), 
+        Artikel.find().skip(offset).limit(limit).populate<Pick<IPopulatedArtikel, 'author'>>('author')
+    ])
+    .then((results) => {
+        const benutzer = results[0];
+        const artikelnAnzahl = results[1];
+        console.count();
+        const artikeln = results[2];
+        console.log(offset, limit, benutzer, artikelnAnzahl, artikeln)
+
+        res.json({ artikelnAnzahl: artikelnAnzahl, artikeln: artikeln.map((art) => art.toJSONFor(benutzer))});
+    })
+    .catch(next);
+    
+})
 artikel.get("/:slug",  authorization.optional, (req: CustomRequest, res: Response, next: NextFunction) => {
     const {  auth } = req;
     const artikel = req.artikel as ArtikelDocument;
@@ -51,7 +82,7 @@ artikel.put("/:slug",  authorization.required, (req: CustomRequest, res: Respons
         }
     })
 })
-artikel.delete("/:slug",  authorization.optional, (req: CustomRequest, res: Response, next: NextFunction) => {
+artikel.delete("/:slug",  authorization.required, (req: CustomRequest, res: Response, next: NextFunction) => {
     const {  auth } = req;
     const artikel = req.artikel as ArtikelDocument;
     if (!auth) {

@@ -62,7 +62,7 @@ export const benutzerSchema = new Schema<IBenutzer, BenutzerModel, BenutzerMetho
 }, { collection: 'benutzer', timestamps: true });
 
 benutzerSchema.method('validatePassword', function(password: string) {
-    const hash = crypto.pbkdf2Sync(password, this.salt, 10000, 512, 'sha512').toString('hex');
+    const hash = crypto.pbkdf2Sync(password, this.salt!, 10000, 512, 'sha512').toString('hex');
     return this.hash === hash;
 })
 benutzerSchema.method('setPassword', function(password: string):void {
@@ -103,17 +103,17 @@ benutzerSchema.method('toProfileFor', function(benutzer: BenutzerDocument): IPro
     }
 })
 benutzerSchema.method('isFollowing', function(userId: Types.ObjectId): boolean {
-    return this.following.some((followerId) => followerId.toString() === userId.toString())
+    return this.following!.some((followerId) => followerId.toString() === userId.toString())
 })
 benutzerSchema.method('follow', function(userId: Types.ObjectId): Promise<BenutzerDocument> {
-    if (this.following.indexOf(userId) === -1) {
-        this.following.push(userId);
+    if (this.following!.indexOf(userId) === -1) {
+        this.following!.push(userId);
     }
     return this.save({ validateModifiedOnly: true });
 
 })
 benutzerSchema.method('unfollow', async function(userId: Types.ObjectId): Promise<BenutzerDocument> {
-    this.following.remove(userId);
+    this.following!.remove(userId);
     return this.save({ validateModifiedOnly: true });
 })
 

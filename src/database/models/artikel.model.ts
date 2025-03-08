@@ -1,9 +1,11 @@
 import { CallbackWithoutResultAndOptionalError,  model, Schema } from "mongoose";
 import { checkFields, dateToString, TCheckFieldObject } from "../../helpers/helpers";
-import { ArtikelDocument, ArtikelMethods, ArtikelModel, IArtikel } from "../../interfaces/artikel.interfaces";
+import { ArtikelDocument, ArtikelMethods, ArtikelModel, ArtikelPopulatedDocument, IArtikel } from "../../interfaces/artikel.interfaces";
 import { BenutzerDocument } from "./benutzer.model";
 import slugify from "slugify";
 import { AlreadyExistsError, CustomError } from "../../helpers/customErrors";
+import { TKommentInput } from "../../interfaces/komment.interfaces";
+import Komment from "./komment.model";
 
 const artikelSchema = new Schema<IArtikel, ArtikelModel, ArtikelMethods>({
     slug: {
@@ -18,7 +20,7 @@ const artikelSchema = new Schema<IArtikel, ArtikelModel, ArtikelMethods>({
         trim: true, 
         required: [true, 'darf nicht Null sein!'],
         minlength: [3, 'Titel muss mindestens 3 Zeichen lang sein'],
-        maxlength: [30, 'Titel darf hochstens 30 Zeichen lang sein'],
+        maxlength: [60, 'Titel darf hochstens 30 Zeichen lang sein'],
         unique: true,
     },
     description: {
@@ -66,7 +68,7 @@ artikelSchema.pre('save', function(this: ArtikelDocument, next: CallbackWithoutR
         name: 'title',
         value: this!.title,
         minLength: 3,
-        maxLength: 30,
+        maxLength: 70,
     };
     const checkObjectSlug: TCheckFieldObject = {
         name: 'slug',
@@ -109,11 +111,11 @@ artikelSchema.pre('validate', function(next: CallbackWithoutResultAndOptionalErr
     next();
 })
 artikelSchema.method('generateSlug', function (): void {
-    this.slug = slugify(this.title);
+    this.slug = slugify(this.title, { remove: /[*+~.()'"!:@]/g, lower: true, trim: true});
     this.save({validateModifiedOnly: true});
 });
 
-artikelSchema.method('toJSONFor', function (this: ArtikelDocument , benutzer: BenutzerDocument) {
+artikelSchema.method('toJSONFor', function (this: ArtikelPopulatedDocument , benutzer: BenutzerDocument) {
     return {
         slug: this!.slug,
         title: this!.title,
@@ -127,7 +129,8 @@ artikelSchema.method('toJSONFor', function (this: ArtikelDocument , benutzer: Be
         updatedAt: dateToString(this!.updatedAt)
     }
 
-})
+});
+
 artikelSchema.method('updateWith', function (this: ArtikelDocument , { title, body, description, tags } : {
     title?: string,
     body?: string,
@@ -148,7 +151,17 @@ artikelSchema.method('updateWith', function (this: ArtikelDocument , { title, bo
         this!.set("tags", tags.split(' '));
     }
     return this;
-})
+});
+
+artikelSchema.method('kommentErstellen', function (this: ArtikelDocument, kommentInput: TKommentInput ): void {
+    kommentInput.artikel = this?._id;
+    Komment.create(kommentInput)
+    .then((savedKomment) => {
+        this!.kommentar.push(savedKomment._id);
+        this?.save();
+    })
+    .catch(err => console.error(err));
+});
 
 const Artikel: ArtikelModel = model<IArtikel, ArtikelModel>('Artikel', artikelSchema);
 

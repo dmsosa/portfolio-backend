@@ -12,12 +12,12 @@ function checkFields(entityName: string, checkObjects: TCheckFieldObject[]): voi
     for (const checkObject of checkObjects) {
         if (checkObject.minLength) {
             if (checkObject.value.toString().length < checkObject.minLength) {
-                errorMessage += `${errorMessage.length > 0 && ", "} ${checkObject.name} muss mindestens ${checkObject.minLength} Zeichen lang sein`;
+                errorMessage += `${errorMessage.length > 0 && ", "} ${checkObject.name} muss mindestens ${checkObject.minLength} Zeichen lang sein\n VALUE: ${checkObject.value}`;
             }
         }
         if (checkObject.maxLength) {
             if (checkObject.value.toString().length > checkObject.maxLength) {
-                errorMessage += `${errorMessage.length > 0 && ", "} ${checkObject.name} darf hochstens ${checkObject.maxLength} Zeichen lang sein`;
+                errorMessage += `${errorMessage.length > 0 && ", "} ${checkObject.name} darf hochstens ${checkObject.maxLength} Zeichen lang sein\n VALUE: ${checkObject.value}`;
             }
         }
         if (checkObject.regex) {

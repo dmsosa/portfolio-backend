@@ -8,10 +8,10 @@ export interface IBenutzer {
     email: string;
     bio: string;
     image: string;
-    hash: string;
-    salt: string;
-    following: Types.Array<Types.ObjectId>;
-    favorites: Types.Array<Types.ObjectId>;
+    hash?: string;
+    salt?: string;
+    following?: Types.Array<Types.ObjectId>;
+    favorites?: Types.Array<Types.ObjectId>;
     role: 'ADMIN' | 'BENUTZER';
 };
 

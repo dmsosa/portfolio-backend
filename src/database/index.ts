@@ -22,7 +22,7 @@ mongoose.connect(DB_URI, options)
   .catch((e) => {
     logger.info('Mongoose konnte nicht vebindet werden');
     logger.error(e);
-  });;
+  });
 
 mongoose.connection.on('connected', () => {
     logger.info("Datenbank Verbindung offnet auf:  " + DB_URI + "!" );

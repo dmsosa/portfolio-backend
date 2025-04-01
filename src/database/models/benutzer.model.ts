@@ -1,11 +1,8 @@
-import {   Document, Model, model, Schema, Types } from "mongoose";
-import { BenutzerMethods, IAuthJSON, IBenutzer, IProfileInfo } from "../../interfaces/benutzer.interfaces";
+import {  model, Schema, Types } from "mongoose";
+import { BenutzerDocument, BenutzerMethods, BenutzerModel, IAuthJSON, IBenutzer, IProfileInfo } from "../../interfaces/benutzer.interfaces";
 import * as jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../../config/secrets";
 import * as crypto from "crypto";
-type BenutzerModel = Model<IBenutzer, object, BenutzerMethods>
-
-export type BenutzerDocument<T = object> = Omit< Document<Types.ObjectId, object, IBenutzer> & { _id: Types.ObjectId; } & IBenutzer & BenutzerMethods,keyof T> | null;
 
 export const benutzerSchema = new Schema<IBenutzer, BenutzerModel, BenutzerMethods>({
     username: {
@@ -37,15 +34,25 @@ export const benutzerSchema = new Schema<IBenutzer, BenutzerModel, BenutzerMetho
         }
     },
     bio      : {
-        type: Schema.Types.String
+        type: Schema.Types.String,
+        default: 'Hallo, ich nutze das Dmblog!',
     },
     image    : {
-        type: Schema.Types.String
+        type: Schema.Types.String,
+        default: 'https://static.productionready.io/images/smiley-cyrus.jpg',
     },
     following: [
         {
             type: Schema.Types.ObjectId,
-            ref : 'User'
+            ref : 'User',
+            default: [],
+        }
+    ],
+    favorites: [
+        {
+            type: Schema.Types.ObjectId,
+            ref : 'Artikel',
+            default: [],
         }
     ],
     hash     : {
@@ -115,6 +122,26 @@ benutzerSchema.method('follow', function(userId: Types.ObjectId): Promise<Benutz
 benutzerSchema.method('unfollow', async function(userId: Types.ObjectId): Promise<BenutzerDocument> {
     this.following!.remove(userId);
     return this.save({ validateModifiedOnly: true });
+})
+benutzerSchema.method('isFavorite', function(artikelId: Types.ObjectId): boolean {
+    return this.favorites!.some((favId) => favId.toString() === artikelId.toString());
+})
+benutzerSchema.method('favorite', async function(artikelId: Types.ObjectId): Promise<void> {
+    if (this.favorites!.indexOf(artikelId) === -1) {
+        this.favorites!.push(artikelId._id);
+        this.save({ validateModifiedOnly: true });
+        return;
+    }
+    
+    
+})
+benutzerSchema.method('unfavorite', async function(artikelId: Types.ObjectId): Promise<void> {
+    if (!this.favorites) {
+        return;
+    }
+    this.favorites!.remove(artikelId);
+    this.save({ validateModifiedOnly: true });
+    return;
 })
 
 

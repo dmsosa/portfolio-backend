@@ -1,11 +1,11 @@
-import { CallbackWithoutResultAndOptionalError,  model, Schema } from "mongoose";
+import { CallbackWithoutResultAndOptionalError,  model, Schema, Types } from "mongoose";
 import { checkFields, dateToString, TCheckFieldObject } from "../../helpers/helpers";
 import { ArtikelDocument, ArtikelMethods, ArtikelModel, ArtikelPopulatedDocument, IArtikel } from "../../interfaces/artikel.interfaces";
-import { BenutzerDocument } from "./benutzer.model";
 import slugify from "slugify";
 import { AlreadyExistsError, CustomError } from "../../helpers/customErrors";
 import { TKommentInput } from "../../interfaces/komment.interfaces";
 import Komment from "./komment.model";
+import { BenutzerDocument } from "../../interfaces/benutzer.interfaces";
 
 const artikelSchema = new Schema<IArtikel, ArtikelModel, ArtikelMethods>({
     slug: {
@@ -100,6 +100,8 @@ artikelSchema.pre('save', function(this: ArtikelDocument, next: CallbackWithoutR
     Artikel.countDocuments({ slug: this!.slug })
     .then((found) => { if (this!.isNew ? found > 0 : found > 0) { throw new AlreadyExistsError('Artikel', `Es gibt schon ${found} mit slug: '${this!.slug}'`)}}).catch(next);
 
+    this!.tags.forEach((tag) => tag.trim());
+    
     this!.updatedAt = new Date();
     next();
 }) 
@@ -123,7 +125,7 @@ artikelSchema.method('toJSONFor', function (this: ArtikelPopulatedDocument , ben
         body: this!.body,
         tags: this!.tags,
         favoritesCount: this!.favorites.length,
-        isFavorite: benutzer ? false : false,
+        isFavorite: benutzer ? this!.isFavorite(benutzer._id) : false,
         author: this!.author?.toProfileFor(benutzer),
         createdAt: dateToString(this!.createdAt),
         updatedAt: dateToString(this!.updatedAt)
@@ -139,7 +141,7 @@ artikelSchema.method('updateWith', function (this: ArtikelDocument , { title, bo
 }) : ArtikelDocument {
     if (title) {
         this!.set("title", title);
-        this!.set("slug", slugify(title));
+        this!.set("slug", slugify(title, { remove: /[*+~.()'"!:@]/g, lower: true, trim: true}));
     }
     if (body) {
         this!.set("body", body);
@@ -148,7 +150,7 @@ artikelSchema.method('updateWith', function (this: ArtikelDocument , { title, bo
         this!.set("description", description);
     }
     if (tags) {
-        this!.set("tags", tags.split(' '));
+        this!.set("tags", tags.split(',').map((tag) => tag.trim()));
     }
     return this;
 });
@@ -158,9 +160,29 @@ artikelSchema.method('kommentErstellen', function (this: ArtikelDocument, kommen
     Komment.create(kommentInput)
     .then((savedKomment) => {
         this!.kommentar.push(savedKomment._id);
-        this?.save();
+        this!.save();
     })
     .catch(err => console.error(err));
+});
+artikelSchema.method('isFavorite', function (this: ArtikelDocument, benutzerId: Types.ObjectId ): boolean {
+    console.log(this?.favorites)!
+    return this!.favorites.includes(benutzerId)
+});
+artikelSchema.method('addFavorite', function (this: ArtikelDocument, benutzerId: Types.ObjectId ): Promise<ArtikelDocument> {
+    if (this!.favorites.indexOf(benutzerId) === -1 ) {
+        this!.favorites.push(benutzerId);
+        return this!.save();
+    } else {
+        return Promise.resolve(this);
+    }
+});
+artikelSchema.method('removeFavorite', function (this: ArtikelDocument, benutzerId: Types.ObjectId ): Promise<ArtikelDocument> {
+    if (this!.favorites.indexOf(benutzerId) !== -1 ) {
+        this!.favorites.remove(benutzerId);
+        return this!.save();
+    } else {
+        return Promise.resolve(this);
+    }
 });
 
 const Artikel: ArtikelModel = model<IArtikel, ArtikelModel>('Artikel', artikelSchema);

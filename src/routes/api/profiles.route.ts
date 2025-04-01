@@ -2,13 +2,18 @@ import { NextFunction, Response, Router } from "express";
 import { authorization } from "../../middleware/authorization";
 import Benutzer from "../../database/models/benutzer.model";
 import { CustomRequest } from "../../interfaces/express";
+import { NotFoundError } from "../../helpers/customErrors";
 
 const profiles = Router();
 
 profiles.param("username",  (req: CustomRequest, res: Response, next: NextFunction, username: string) => {
     Benutzer.findOne({ username }).then((benutzer) => {
-        req.profile = benutzer;
-        return next();
+        if (!benutzer) {
+            next(new NotFoundError('Benutzer', `mit username: '${username}'`)); 
+        } else {
+            req.profile = benutzer;
+            next();
+        }
     }).catch(next);
 })
 
@@ -34,6 +39,7 @@ profiles.post("/:username/follow", authorization.required, (req: CustomRequest, 
         })
         .catch(next);
 });
+
 profiles.delete("/:username/follow", authorization.required, (req: CustomRequest, res: Response, next: NextFunction) => {
     const { auth, profile } = req;
     Benutzer.findById(auth?.id)

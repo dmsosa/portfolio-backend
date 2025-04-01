@@ -1,7 +1,6 @@
 import { MergeType,  Model, Types } from "mongoose";
-import { IProfileInfo } from "./benutzer.interfaces";
+import { BenutzerDocument, IProfileInfo } from "./benutzer.interfaces";
 import { Document } from "mongoose";
-import { BenutzerDocument } from "../database/models/benutzer.model";
 import { TKommentInput } from "./komment.interfaces";
 // 1. Create an interface representing a document in MongoDB.
 //An interface describing how the data is saved in MongoDB
@@ -40,8 +39,8 @@ export interface ArtikelMethods {
     toJSONFor(benutzer: BenutzerDocument): Promise<IArtikelInfo>;
     updateWith({ title, body, description, tags }: { title: IArtikel['title'], body: IArtikel['body'], description: IArtikel['description'], tags: string }): ArtikelDocument;
     isFavorite(benutzerId: Types.ObjectId): boolean;
-    favorite(benutzerId: Types.ObjectId): Promise<void>;
-    unfavorite(benutzerId: Types.ObjectId): Promise<void>;
+    addFavorite(benutzerId: Types.ObjectId): Promise<ArtikelDocument>;
+    removeFavorite(benutzerId: Types.ObjectId): Promise<ArtikelDocument>;
     kommentErstellen(kommentInput: TKommentInput): Promise<void>;
 };
 

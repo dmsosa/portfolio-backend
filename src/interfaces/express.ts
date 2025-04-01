@@ -1,12 +1,12 @@
 import { Request } from "express";
 import { BenutzerDocument } from "../database/models/benutzer.model";
 import { JwtPayload } from "jsonwebtoken";
-import { ArtikelDocument } from "./artikel.interfaces";
+import { ArtikelPopulatedDocument } from "./artikel.interfaces";
 
 export interface CustomRequest extends Request {
   profile?: BenutzerDocument;
   auth?: JwtPayload;
-  artikel?: ArtikelDocument;
+  artikel?: ArtikelPopulatedDocument;
 }
 declare module "jsonwebtoken" {
   export interface JwtPayload {

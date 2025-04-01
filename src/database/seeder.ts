@@ -8,17 +8,19 @@
 
 import mongoose, { Types } from "mongoose";
 import logger from "../config/logger";
-import { DB, IS_PRODUCTION } from "../config/secrets";
-import Benutzer, { BenutzerDocument } from "./models/benutzer.model";
+import { ADMIN, DB, IS_PRODUCTION } from "../config/secrets";
 import { benutzerSeed } from "./seed/benutzer.data";
 import Artikel from "./models/artikel.model";
 import { artikelSeed } from "./seed/artikel.data";
 import { kommentSeed } from "./seed/komment.data";
+import Komment from "./models/komment.model";
+import { BenutzerDocument } from "../interfaces/benutzer.interfaces";
+import Benutzer from "./models/benutzer.model";
 
 function getRandomNumberInRange(min: number, max: number): number {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-async function makeFollowers(savedBenutzer: BenutzerDocument[]) {
+function makeFollowers(savedBenutzer: BenutzerDocument[]) {
     const lastArrayIndex = savedBenutzer.length - 1;
         
     savedBenutzer.forEach((benutzer) => {
@@ -30,7 +32,6 @@ async function makeFollowers(savedBenutzer: BenutzerDocument[]) {
         })
     })
 }
-
 
 const DB_URI = `mongodb://${DB.HOST}:${DB.PORT}/${DB.NAME}`;
 
@@ -45,48 +46,83 @@ const options = {
 logger.debug("Seeding");
 
 mongoose.connect(DB_URI, options)
-.then( async (mongoose) => {
+.then( async () => {
     //BENUTZER UND ARTIKELN SETZEN
-    logger.info("Seeder verbunden!");
-    mongoose.connection.db?.dropCollection('benutzer');
-    mongoose.connection.db?.dropCollection('artikeln');
-    mongoose.connection.db?.dropCollection('kommentar');
-        Benutzer.insertMany(benutzerSeed)
-        .then((savedBenutzer) => {
-            //Make followers
-            makeFollowers(savedBenutzer);
 
-            const randomAuthors: Types.ObjectId[] = savedBenutzer.map((benutzer) => benutzer._id);
+    if (process.argv[2] == '-d') {
+        logger.info("Seeder verbunden! \n DROP COLLECTIONS");
+        mongoose.connection.db?.dropCollection('benutzer');
+        mongoose.connection.db?.dropCollection('artikeln');
+        mongoose.connection.db?.dropCollection('kommentar');
+    }
+    
 
-            artikelSeed.forEach((art) => {
-                const randomIndex = getRandomNumberInRange(0, randomAuthors.length - 1);
-                const author = randomAuthors[randomIndex];
+    //ADMIN BENUTZER ERSTELLEN;
 
-                art.author = author;
+    const admin = new Benutzer();
+    admin.username = ADMIN.USERNAME;
+    admin.email = ADMIN.EMAIL;
 
-                const tagsString = art.tags as string;
+    admin.setPassword(ADMIN.PASSWORD);
+    admin.save();
+    Benutzer.insertMany(benutzerSeed)
+    .then( (savedBenutzer) =>  {
+        //Make followers
+        makeFollowers(savedBenutzer);
 
-                art.tags = tagsString.split(",");
-                art.tags.forEach((word) => word.trim());
-            });
-            return Artikel.insertMany(artikelSeed)
-            .then((savedArtikel) => {
-                kommentSeed.forEach((komm) => {
-                    const randomIndexAuthors = getRandomNumberInRange(0, randomAuthors.length - 1);
-                    const randomIndexArtikeln = getRandomNumberInRange(0, savedArtikel.length - 1);
+        
+        const allAuthors: Types.ObjectId[] = savedBenutzer.map((benutzer) => benutzer._id);
 
-                    const randomArtikel = savedArtikel[randomIndexArtikeln];
-                    komm.author = randomAuthors[randomIndexAuthors];
-                    
-                    randomArtikel.kommentErstellen(komm);
-                    
-                })
-                console.log("Datenbank geseedet werden mit artikeln, benutzer und kommentar");
+        artikelSeed.forEach( (art) => {
+            const randomIndex = getRandomNumberInRange(0, allAuthors.length - 1);
+            const author = allAuthors[randomIndex];
+            
+            art.author = author;
 
+
+            //Kommentar setzen
+
+            //Tags zu Array verwalten
+            const tagsString = art.tags as string;
+
+            art.tags = tagsString.split(",");
+            art.tags.forEach((word) => word.trim());
+
+        });
+        Artikel.insertMany(artikelSeed)
+        .then((savedArtikel) => {
+            //Benutzer Favs 
+            savedBenutzer.forEach((benutzer) => {
+                
+                const favoritenAnzahl = getRandomNumberInRange(6, savedArtikel.length); //zumindest 6 Favoriten Artikeln
+                for (let i = 0; i < favoritenAnzahl ; i++) {
+                    const randomIndexArtikel = getRandomNumberInRange(0, savedArtikel.length - 1); 
+                    const randomArtikel = savedArtikel[randomIndexArtikel];
+        
+                    benutzer!.favorite(randomArtikel!._id);  
+                }
+            }); 
+
+            savedArtikel.forEach( async (art) => {
+                const kommentAnzahl = getRandomNumberInRange(5, 25);
+                const kommentIdArray: Types.ObjectId[] = [];
+                for (let i = 0; i < kommentAnzahl ; i++ ) {
+                    const randomIndexKomment = getRandomNumberInRange(0, kommentSeed.length - 1);
+                    const randomKomment = kommentSeed[randomIndexKomment];
+                    const randomIndexAuthors = getRandomNumberInRange(0, allAuthors.length - 1);
+
+                    randomKomment.author = allAuthors[randomIndexAuthors];
+                    randomKomment.artikel = art._id;
+                    const savedKomment = await Komment.create(randomKomment);
+                    kommentIdArray.push(savedKomment.id);
+                }
+                art.updateOne({ kommentar: kommentIdArray})
             })
-            .catch(err => console.error(err));
+            console.log("Datenbank geseedet werden mit artikeln, benutzer und kommentar");
         })
-        mongoose.disconnect();
+        .catch(err => console.error(err))
+    })
+
 })
 .catch((e) => {
 logger.info('Mongoose konnte nicht bei Seeding vebindet werden');

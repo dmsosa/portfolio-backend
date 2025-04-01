@@ -2,7 +2,7 @@ import * as dotenv from "dotenv";
 import * as _ from "lodash";
 import * as path from "path";
 
-dotenv.config({path: "../../env"});
+dotenv.config({path: "../env"});
 
 export const ENVIRONMENT = _.defaultTo(process.env.ENVIRONMENT, "dev");
 export const IS_PRODUCTION = ENVIRONMENT === "production";
@@ -16,4 +16,9 @@ export const DB = {
   HOST: _.defaultTo(process.env.DB_HOST, "localhost"),
   NAME: _.defaultTo(process.env.DB_NAME, "developmentPortfolio"),
   PORT: _.defaultTo(process.env.DB_PORT ? parseInt(process.env.DB_PORT) : null, 27017),
+}
+export const ADMIN = {
+  USERNAME: _.defaultTo(process.env.ADMIN_USERNAME, "admin"),
+  EMAIL: _.defaultTo(process.env.ADMIN_EMAIL, "admin@admin.com"),
+  PASSWORD: _.defaultTo(process.env.ADMIN_PASSWORD, "adminpassword"),
 }

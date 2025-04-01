@@ -1,5 +1,4 @@
-import { Types } from "mongoose";
-import { BenutzerDocument } from "../database/models/benutzer.model";
+import { Document, Model, Types } from "mongoose";
 
 
 
@@ -37,7 +36,14 @@ export interface BenutzerMethods {
     toAuthJSON(): IAuthJSON;
     toProfileFor(benutzer: BenutzerDocument): IProfileInfo;
     isFollowing(benutzerId: Types.ObjectId): boolean;
-    follow(benutzerId: Types.ObjectId): Promise<void>;
-    unfollow(benutzerId: Types.ObjectId): Promise<void>;
+    follow(benutzerId: Types.ObjectId): Promise<BenutzerDocument>;
+    unfollow(benutzerId: Types.ObjectId): Promise<BenutzerDocument>;
+    isFavorite(artikelId: Types.ObjectId): boolean;
+    favorite(artikelId: Types.ObjectId): Promise<void>;
+    unfollowfavorite(artikelId: Types.ObjectId): Promise<void>;
 }
+
+export type BenutzerModel = Model<IBenutzer, object, BenutzerMethods>
+
+export type BenutzerDocument<T = object> = Omit< Document<Types.ObjectId, object, IBenutzer> & { _id: Types.ObjectId; } & IBenutzer & BenutzerMethods,keyof T> | null;
 

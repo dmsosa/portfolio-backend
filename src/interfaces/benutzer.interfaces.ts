@@ -26,7 +26,7 @@ export interface IProfileInfo {
     username: string;
     bio: string;
     image: string;
-    following: boolean;
+    isFollowing: boolean;
 }
 
 export interface BenutzerMethods {

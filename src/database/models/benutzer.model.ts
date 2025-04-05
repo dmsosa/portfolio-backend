@@ -44,7 +44,7 @@ export const benutzerSchema = new Schema<IBenutzer, BenutzerModel, BenutzerMetho
     following: [
         {
             type: Schema.Types.ObjectId,
-            ref : 'User',
+            ref : 'Benutzer',
             default: [],
         }
     ],
@@ -106,7 +106,7 @@ benutzerSchema.method('toProfileFor', function(benutzer: BenutzerDocument): IPro
         username: this.username,
         image: this.image,
         bio: this.bio,
-        following: benutzer ? benutzer.isFollowing(this._id) : false,
+        isFollowing: benutzer ? benutzer.isFollowing(this._id) : false,
     }
 })
 benutzerSchema.method('isFollowing', function(userId: Types.ObjectId): boolean {

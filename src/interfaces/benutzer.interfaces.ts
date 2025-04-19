@@ -10,6 +10,7 @@ export interface IBenutzer {
     hash?: string;
     salt?: string;
     following?: Types.Array<Types.ObjectId>;
+    followers?: Types.Array<Types.ObjectId>;
     favorites?: Types.Array<Types.ObjectId>;
     role: 'ADMIN' | 'BENUTZER';
 };
@@ -27,6 +28,8 @@ export interface IProfileInfo {
     bio: string;
     image: string;
     isFollowing: boolean;
+    followingCount: number;
+    followersCount: number;
 }
 
 export interface BenutzerMethods {
@@ -40,7 +43,7 @@ export interface BenutzerMethods {
     unfollow(benutzerId: Types.ObjectId): Promise<BenutzerDocument>;
     isFavorite(artikelId: Types.ObjectId): boolean;
     favorite(artikelId: Types.ObjectId): Promise<void>;
-    unfollowfavorite(artikelId: Types.ObjectId): Promise<void>;
+    unfavorite(artikelId: Types.ObjectId): Promise<void>;
 }
 
 export type BenutzerModel = Model<IBenutzer, object, BenutzerMethods>

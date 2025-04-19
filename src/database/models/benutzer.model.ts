@@ -48,6 +48,13 @@ export const benutzerSchema = new Schema<IBenutzer, BenutzerModel, BenutzerMetho
             default: [],
         }
     ],
+    followers: [
+        {
+            type: Schema.Types.ObjectId,
+            ref : 'Benutzer',
+            default: [],
+        }
+    ],
     favorites: [
         {
             type: Schema.Types.ObjectId,
@@ -107,6 +114,8 @@ benutzerSchema.method('toProfileFor', function(benutzer: BenutzerDocument): IPro
         image: this.image,
         bio: this.bio,
         isFollowing: benutzer ? benutzer.isFollowing(this._id) : false,
+        followingCount: this.following? this.following.length : 0,
+        followersCount: this.followers? this.followers.length : 0,
     }
 })
 benutzerSchema.method('isFollowing', function(userId: Types.ObjectId): boolean {
@@ -115,12 +124,26 @@ benutzerSchema.method('isFollowing', function(userId: Types.ObjectId): boolean {
 benutzerSchema.method('follow', function(userId: Types.ObjectId): Promise<BenutzerDocument> {
     if (this.following!.indexOf(userId) === -1) {
         this.following!.push(userId);
+        //followers array verandern
+        Benutzer.findById(userId).then((followedUser) => {
+            if (followedUser?.followers!.indexOf(this.id) === -1) {
+                followedUser.followers.push(this.id);
+            }
+        })
     }
     return this.save({ validateModifiedOnly: true });
 
 })
 benutzerSchema.method('unfollow', async function(userId: Types.ObjectId): Promise<BenutzerDocument> {
-    this.following!.remove(userId);
+    if (this.following!.indexOf(userId) !== -1) {
+        this.following!.remove(userId);
+        //followers array verandern
+        Benutzer.findById(userId).then((unfollowedUser) => {
+            if (unfollowedUser?.followers!.indexOf(this.id) !== -1) {
+                unfollowedUser?.followers!.remove(this.id);
+            }
+        })
+    }
     return this.save({ validateModifiedOnly: true });
 })
 benutzerSchema.method('isFavorite', function(artikelId: Types.ObjectId): boolean {
@@ -143,13 +166,6 @@ benutzerSchema.method('unfavorite', async function(artikelId: Types.ObjectId): P
     this.save({ validateModifiedOnly: true });
     return;
 })
-
-
-
-
-
-
-
 
 const Benutzer: BenutzerModel = model<IBenutzer, BenutzerModel>('Benutzer', benutzerSchema);
 

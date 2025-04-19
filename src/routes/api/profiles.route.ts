@@ -64,9 +64,9 @@ profiles.get("/", authorization.optional, (req: CustomRequest, res: Response, ne
             Benutzer.find(findQuery).limit(limit).skip(offset)
         ])
         .then((results) => {
-            const benutzerCount = results[0];
+            const benutzerAnzahl = results[0];
             const benutzerArray = results[1];
-            res.json({ benutzerCount, benutzerArray: benutzerArray.map((b) => b.toProfileFor(loggedBenutzer ? loggedBenutzer : null))});
+            res.json({ benutzerAnzahl, benutzerArray: benutzerArray.map((b) => b.toProfileFor(loggedBenutzer ? loggedBenutzer : null))});
         })
     })
     .catch(next);

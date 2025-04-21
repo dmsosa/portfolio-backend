@@ -6,6 +6,7 @@ import { authorization } from '../../middleware/authorization';
 import { ArtikelDocument, ArtikelPopulatedDocument, IPopulatedArtikel } from '../../interfaces/artikel.interfaces';
 import Benutzer from '../../database/models/benutzer.model';
 import { Types } from 'mongoose';
+import Komment from '../../database/models/komment.model';
 // import Benutzer from '../../database/models/benutzer.model';
 
 const artikel = Router();
@@ -41,7 +42,6 @@ artikel.get("/",  authorization.optional, (req: CustomRequest, res: Response, ne
         offset = parseInt(query.offset as string) * limit;
     }
     if (query.tags) {
-        console.log(query);
         const tags = query.tags as string;
         findQuery.tags = { $all: tags.split(",") };
     }
@@ -113,7 +113,7 @@ artikel.get("/feed",  authorization.required, (req: CustomRequest, res: Response
         .skip(offset)
         .populate<Pick<IPopulatedArtikel, 'author'>>('author')
         .then((artikeln) => {
-            res.json({ artikelnAnzahl: artikelnAnzahl, artikeln: artikeln.map((art) => art.toJSONFor(benutzer))});
+            res.json({ artikelnAnzahl, artikeln: artikeln.map((art) => art.toJSONFor(benutzer))});
         });
     })
     .catch(next);
@@ -127,7 +127,6 @@ artikel.post("/",  authorization.required, (req: CustomRequest, res: Response, n
     Benutzer.findById(auth!.id)
     .then((benutzer) => {
         if (!benutzer) {
-            console.log(auth, benutzer)
             next(new NotFoundError('Benutzer'));
         } else {
             Artikel.create({ title, body, description, tags, author: benutzer.id  })
@@ -193,7 +192,6 @@ artikel.post("/fav/:slug",  authorization.required, (req: CustomRequest, res: Re
     } else {
         Benutzer.findById(auth!.id)
         .then((benutzer) => {
-            console.log(artikel?.isFavorite(benutzer!._id));
             artikel!.addFavorite(benutzer!._id)
             .then((artikel) => res.json(artikel?.toJSONFor(benutzer)));
         })
@@ -208,13 +206,63 @@ artikel.delete("/fav/:slug",  authorization.required, (req: CustomRequest, res: 
     } else {
         Benutzer.findById(auth!.id)
         .then((benutzer) => {
-            console.log(artikel?.isFavorite(benutzer!._id));
             artikel!.removeFavorite(benutzer!._id)
             .then((artikel) => res.json(artikel?.toJSONFor(benutzer)));
         })
         .catch(next);
     }
 })
+artikel.get("/komment/:slug", authorization.optional, (req: CustomRequest, res: Response, next: NextFunction) => {
+    const { auth } = req;
+    const artikel = req.artikel as ArtikelPopulatedDocument;
+    let limit: number = 0;
+    let offset: number = 0;
+    if (req.query.limit) {
+        limit = parseInt(req.query.limit as string);
+    }
+    if (req.query.offset) {
+        offset = parseInt(req.query.offset as string) * limit;
+    }
+    //Artikel greifen
+    Promise.all([
+        Benutzer.findById(auth?.id),
+        Komment.find({ artikel: artikel!._id })
+        .limit(limit).skip(offset)
+        .sort({ createdAt: -1 })
+        .populate("author")
+    ]).then((results) => {
+        const benutzer = results[0];
+        const kommentArray = results[1];
 
+        res.json({ kommentAnzahl: kommentArray.length, kommentArray: kommentArray.map((komment) => komment.toJSONFor(benutzer))})
+    })
+    .catch(next);
+})
+artikel.post("/komment/:slug", authorization.required, async (req: CustomRequest, res: Response, next: NextFunction) => {
+    const { auth } = req;
+    const { body } = req.body;
+    const artikel = req.artikel as ArtikelPopulatedDocument;
+
+    //Body haben
+    //Artikel haben
+    //Author haben
+    //Komment.save()
+    //Artikel.push(this.id)
+    //Artikel greifen
+    try {
+        const benutzer = await Benutzer.findById(auth?.id);
+        if (!benutzer) {
+            res.send(new CustomError("Unauthorisierung", 401))
+        }
+        const komment = new Komment({ artikel: artikel?._id, author: benutzer?.id, body: body });
+        const savedKomment = await komment.save();
+        artikel?.kommentar.push(komment);
+        artikel?.save();
+        res.send({ komment: savedKomment.toJSONFor(benutzer)});
+
+    } catch (error) {
+        next(error);
+    }
+})
 
 export default artikel;

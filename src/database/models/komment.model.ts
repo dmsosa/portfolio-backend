@@ -1,7 +1,8 @@
 import { CallbackWithoutResultAndOptionalError, model, Schema } from "mongoose";
-import { IKomment, KommentDocument, KommentModel } from "../../interfaces/komment.interfaces";
+import { IKomment, IKommentInfo, KommentDocument, KommentMethods, KommentModel, KommentPopulatedDocument } from "../../interfaces/komment.interfaces";
+import { BenutzerDocument } from "../../interfaces/benutzer.interfaces";
 
-const kommentSchema = new Schema<IKomment, KommentModel>({
+const kommentSchema = new Schema<IKomment, KommentModel, KommentMethods>({
     artikel: { 
         type: Schema.Types.ObjectId,
         ref: 'Artikel'
@@ -32,6 +33,14 @@ kommentSchema.pre('save', function(this: KommentDocument, next: CallbackWithoutR
     this!.updatedAt = new Date();
     next();
 })
-
+kommentSchema.method('toJSONFor', function(this: KommentPopulatedDocument, benutzer: BenutzerDocument ):IKommentInfo {
+    return {
+        author: this!.author!.toProfileFor(benutzer ? benutzer : null),
+        body: this!.body,
+        createdAt: this!.createdAt,
+        updatedAt: this!.updatedAt,
+        
+    }
+})
 const Komment: KommentModel = model<IKomment, KommentModel>('Komment', kommentSchema);
 export default Komment;

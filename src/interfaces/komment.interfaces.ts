@@ -1,6 +1,5 @@
 import { Document, MergeType, Model, Types } from "mongoose";
-import { BenutzerDocument } from "../database/models/benutzer.model";
-import { IProfileInfo } from "./benutzer.interfaces";
+import { BenutzerDocument, IProfileInfo } from "./benutzer.interfaces";
 
 export interface IKomment {
     artikel: Types.ObjectId,
@@ -15,6 +14,9 @@ export type TKommentInput = {
     author?: Types.ObjectId,
     body: string,
 }
+export interface KommentMethods {
+    toJSONFor(benutzer: BenutzerDocument): IKommentInfo;
+}
 
 export interface IPopulatedKomment {
     author: BenutzerDocument,
@@ -27,7 +29,7 @@ export interface IKommentInfo {
     updatedAt: Date,
 }
 
-export type KommentModel = Model<IKomment>;
+export type KommentModel = Model<IKomment, object, KommentMethods>;
 
 export type KommentDocument = (Document<Types.ObjectId, object, IKomment> & Omit<IKomment, 'author'> & Pick<IPopulatedKomment, "author"> & { _id: Types.ObjectId; }) | null;
 

@@ -14,7 +14,9 @@ import { BenutzerDocument } from "../../interfaces/benutzer.interfaces";
 const benutzer = Router();
 benutzer.get("/", authorization.required, (req: CustomRequest, res: Response, next: NextFunction) => {
     Benutzer.findOne({ _id: req.auth?.id })
-    .then((benutzer) => res.json(benutzer))
+    .then((benutzer) => {
+      console.log(req.auth)
+      res.json(benutzer?.toAuthJSON())})
     .catch(next);
 });
 benutzer.post("/login", (req: Request, res: Response, next: NextFunction) => {

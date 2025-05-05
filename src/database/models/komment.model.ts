@@ -35,6 +35,7 @@ kommentSchema.pre('save', function(this: KommentDocument, next: CallbackWithoutR
 })
 kommentSchema.method('toJSONFor', function(this: KommentPopulatedDocument, benutzer: BenutzerDocument ):IKommentInfo {
     return {
+        id: this?.id,
         author: this!.author!.toProfileFor(benutzer ? benutzer : null),
         body: this!.body,
         createdAt: this!.createdAt,

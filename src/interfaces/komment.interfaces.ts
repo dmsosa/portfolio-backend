@@ -23,6 +23,7 @@ export interface IPopulatedKomment {
 }
 
 export interface IKommentInfo {
+    id: string,
     author: IProfileInfo,
     body: string,
     createdAt: Date,
@@ -33,4 +34,5 @@ export type KommentModel = Model<IKomment, object, KommentMethods>;
 
 export type KommentDocument = (Document<Types.ObjectId, object, IKomment> & Omit<IKomment, 'author'> & Pick<IPopulatedKomment, "author"> & { _id: Types.ObjectId; }) | null;
 
-export type KommentPopulatedDocument = (Document<Types.ObjectId, object, MergeType<IKomment, Pick<IPopulatedKomment, "author">>> & Omit<IKomment, 'author'> & Pick<IPopulatedKomment, "author"> & { _id: Types.ObjectId; }) | null;
+export type KommentPopulatedDocument = (Document<Types.ObjectId, object, IKomment | MergeType<IKomment, Pick<IPopulatedKomment, "author">> > &  Omit< IKomment & Omit<IKomment, "author"> & Pick<IPopulatedKomment, "author"> & { _id: Types.ObjectId; } & { __v: number; } , keyof KommentMethods> & KommentMethods)
+| null;

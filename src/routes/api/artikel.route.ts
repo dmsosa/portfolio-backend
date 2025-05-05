@@ -7,6 +7,7 @@ import { ArtikelDocument, ArtikelPopulatedDocument, IPopulatedArtikel } from '..
 import Benutzer from '../../database/models/benutzer.model';
 import { Types } from 'mongoose';
 import Komment from '../../database/models/komment.model';
+import { IPopulatedKomment, KommentPopulatedDocument } from '../../interfaces/komment.interfaces';
 // import Benutzer from '../../database/models/benutzer.model';
 
 const artikel = Router();
@@ -19,6 +20,20 @@ artikel.param("slug", (req: CustomRequest, res: Response, next: NextFunction, sl
             next(new NotFoundError('Artikel', `mit slug: '${slug}'`)); 
         } else {
             req.artikel = artikel as ArtikelPopulatedDocument;
+            next();
+        }
+
+    })
+    .catch(next);
+});
+artikel.param("kommentId", (req: CustomRequest, res: Response, next: NextFunction, kommentId: string) => {
+    Komment.findById(kommentId )
+    .populate<Pick<IPopulatedArtikel, 'author'>>('author')
+    .then((komment) => {
+        if (!komment) {
+            next(new NotFoundError('Komment', `mit id: '${kommentId}'`)); 
+        } else {
+            req.komment = komment as KommentPopulatedDocument;
             next();
         }
 
@@ -242,23 +257,57 @@ artikel.post("/komment/:slug", authorization.required, async (req: CustomRequest
     const { auth } = req;
     const { body } = req.body;
     const artikel = req.artikel as ArtikelPopulatedDocument;
-
-    //Body haben
-    //Artikel haben
-    //Author haben
-    //Komment.save()
-    //Artikel.push(this.id)
-    //Artikel greifen
     try {
         const benutzer = await Benutzer.findById(auth?.id);
         if (!benutzer) {
             res.send(new CustomError("Unauthorisierung", 401))
         }
         const komment = new Komment({ artikel: artikel?._id, author: benutzer?.id, body: body });
-        const savedKomment = await komment.save();
+        const populatedKomment = await komment.save().then((savedKomment) => savedKomment.populate<Pick<IPopulatedKomment, 'author'>>('author'));
         artikel?.kommentar.push(komment);
         artikel?.save();
-        res.send({ komment: savedKomment.toJSONFor(benutzer)});
+        res.send(populatedKomment.toJSONFor(benutzer));
+
+    } catch (error) {
+        next(error);
+    }
+})
+artikel.put("/komment/:slug/:kommentId", authorization.required, async (req: CustomRequest, res: Response, next: NextFunction) => {
+    const { auth } = req;
+    const { author, body } = req.body;
+    const komment = req.komment as KommentPopulatedDocument;
+    try {
+        const benutzer = await Benutzer.findById(auth?.id);
+        if (!benutzer) {
+            res.send(new CustomError("Unauthorisierung", 401))
+        } else if (!benutzer?.username !== author) {
+            res.send(new CustomError("Du muss der Author dieses Kommentar sein!", 403, "Unauthorisierungsfehler"))
+        }
+        komment!.body = body;
+        const populatedKomment = await komment!.save().then((savedKomment) => savedKomment.populate<Pick<IPopulatedKomment, 'author'>>('author'));
+        res.json(populatedKomment.toJSONFor(benutzer))
+
+    } catch (error) {
+        next(error);
+    }
+})
+artikel.delete("/komment/:slug/:kommentId", authorization.optional, async (req: CustomRequest, res: Response, next: NextFunction) => {
+    const { auth } = req;
+    const { author } = req.body;
+    const artikel = req.artikel as ArtikelPopulatedDocument;
+    const komment = req.komment as KommentPopulatedDocument;
+
+    try {
+        const benutzer = await Benutzer.findById(auth?.id);
+        if (!benutzer) {
+            res.send(new CustomError("Unauthorisierung", 401))
+        } else if (!benutzer?.username !== author) {
+            res.send(new CustomError("Du muss der Author dieses Kommentar sein!", 403))
+        }
+        komment!.deleteOne();
+        artikel?.kommentar.remove(komment?.id);
+        artikel?.save();
+        res.status(204);
 
     } catch (error) {
         next(error);

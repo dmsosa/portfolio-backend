@@ -100,7 +100,7 @@ artikelSchema.pre('save', function(this: ArtikelDocument, next: CallbackWithoutR
     Artikel.countDocuments({ slug: this!.slug })
     .then((found) => { if (this!.isNew ? found > 0 : found > 0) { throw new AlreadyExistsError('Artikel', `Es gibt schon ${found} mit slug: '${this!.slug}'`)}}).catch(next);
 
-    this!.tags.forEach((tag) => tag.trim());
+    this!.tags = this!.tags.map((tag) => tag.trim());
     
     this!.updatedAt = new Date();
     next();
@@ -127,6 +127,7 @@ artikelSchema.method('toJSONFor', function (this: ArtikelPopulatedDocument , ben
         favoritesCount: this!.favorites.length,
         isFavorite: benutzer ? this!.isFavorite(benutzer._id) : false,
         author: this!.author?.toProfileFor(benutzer),
+        commentsCount: this!.kommentar.length,
         createdAt: dateToString(this!.createdAt),
         updatedAt: dateToString(this!.updatedAt)
     }

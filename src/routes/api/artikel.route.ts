@@ -144,7 +144,13 @@ artikel.post("/",  authorization.required, (req: CustomRequest, res: Response, n
         if (!benutzer) {
             next(new NotFoundError('Benutzer'));
         } else {
-            Artikel.create({ title, body, description, tags, author: benutzer.id  })
+            let tagsArray: string[] = [];
+            if (tags) {
+                const tagsString = tags as string;
+                tagsArray = tagsString.split(',');
+            }
+
+            Artikel.create({ title, body, description, tags: tagsArray, author: benutzer.id  })
             .then((artikel) => {
                 artikel.populate<Pick<IPopulatedArtikel, 'author'>>('author')
                 .then((populatedArtikel) => res.json(populatedArtikel.toJSONFor(benutzer)));

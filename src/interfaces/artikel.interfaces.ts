@@ -53,6 +53,7 @@ export type IArtikelInfo = {
     favoritesCount: number;
     isFavorite: boolean;
     author: IProfileInfo;
+    commentsCount: number;
     createdAt: string;
     updatedAt: string;
 }

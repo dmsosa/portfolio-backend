@@ -4,6 +4,11 @@ import * as jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../../config/secrets";
 import * as crypto from "crypto";
 
+export function sum(a: number, b: number): number {
+  return a + b;
+}
+
+
 export const benutzerSchema = new Schema<IBenutzer, BenutzerModel, BenutzerMethods>({
     username: {
         type: String,
@@ -89,13 +94,13 @@ benutzerSchema.method('generateJwt', function(): string {
 
     const today = new Date();
     const expiresAt = new Date(today);
-    expiresAt.setDate(today.getDate() + 60);
+    expiresAt.setDate(today.getDate() + 1);
 
     return jwt.sign({ 
         id: this._id,
         username: this.username,
         exp: expiresAt.getTime() / 1000,
-    }, JWT_SECRET, { algorithm: 'HS256' });
+    }, JWT_SECRET, { algorithm: 'HS256'});
 })
 
 benutzerSchema.method('toAuthJSON', function(): IAuthJSON {
@@ -105,6 +110,7 @@ benutzerSchema.method('toAuthJSON', function(): IAuthJSON {
       image: this.image,
       bio: this.bio,
       token: this.generateJwt(),
+      role: this.role,
     };
 })
 

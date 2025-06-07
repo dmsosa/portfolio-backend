@@ -22,6 +22,7 @@ export interface IAuthJSON {
     bio: string;
     image: string;
     token: string;
+    role: 'ADMIN' | 'BENUTZER';
 }
 export interface IProfileInfo {
     username: string;

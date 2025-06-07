@@ -39,11 +39,9 @@ benutzer.post("/login", (req: Request, res: Response, next: NextFunction) => {
       })(req, res, next);
 });
 
-benutzer.post('/logout', function(req, res, next) {
-  req.logout(function(err) {
-    if (err) { return next(err); }
-    res.redirect('/');
-  });
+benutzer.post("/logout", (req: Request, res: Response, next: NextFunction) => {
+    //Ende der Session Logik
+    res.json({ message: 'logged out'});
 });
 
 benutzer.post("/", authorization.optional, (req: CustomRequest, res: Response, next: NextFunction) => {

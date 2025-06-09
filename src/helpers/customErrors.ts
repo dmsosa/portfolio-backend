@@ -2,20 +2,15 @@ import { NextFunction, Request, Response } from "express";
 
 export class CustomError extends Error {
     status: number;
+    cause: string;
     constructor(message: string, status: number = 500, name: string = "CustomError") {
         super(message);
+        this.cause = message;
         this.name = name;
         this.status = status;
     }
+}
 
-}
-interface ErrorResponse {
-    errors: {
-        status: number,
-        message: string,
-        error: CustomError,
-    }
-}
 export class NotFoundError extends CustomError {
     constructor(entity: string, message: string="") {
         super(`${entity} not found ${message}`)
@@ -36,15 +31,15 @@ export class FieldError extends CustomError {
         this.status = 422;
     }
 } 
+
 export function handleErrorProduction(err: CustomError, req: Request, res: Response, next: NextFunction): void {
     res.status(err.status);
     res.json({
-        errors: {
             status: err.status,
             message: err.message,
+            cause: err.cause,
             error: err,
-        }
-    } as ErrorResponse);
+    });
     next(err);
 }
 export function handleErrorDevelopment(err: CustomError, req: Request, res: Response, next: NextFunction): void {
@@ -54,12 +49,10 @@ export function handleErrorDevelopment(err: CustomError, req: Request, res: Resp
     
     res.status(err.status ?? 500);
     res.json({
-        errors: {
             status: err.status,
             message: err.message,
+            cause: err.cause,
             error: err,
-        }
-    } as ErrorResponse);
+    });
     next(err);
-
 }

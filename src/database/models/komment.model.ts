@@ -17,7 +17,7 @@ const kommentSchema = new Schema<IKomment, KommentModel, KommentMethods>({
         trim: true, 
         required: [true, 'darf nicht Null sein!'],
         minlength: [10, 'Body muss mindestens 10 Zeichen lang sein'],
-        maxlength: [1000, 'Body darf hochstens 1000 Zeichen lang sein'],
+        maxlength: [500, 'Body darf hochstens 500 Zeichen lang sein'],
     },
     createdAt: {
         type: Schema.Types.Date,

@@ -174,21 +174,30 @@ artikel.get("/:slug",  authorization.optional, (req: CustomRequest, res: Respons
         .catch(next);
     }
 })
-artikel.put("/:slug",  authorization.required, (req: CustomRequest, res: Response, next: NextFunction) => {
+artikel.put("/:slug",  authorization.required, async (req: CustomRequest, res: Response, next: NextFunction) => {
     const { auth, artikel } = req;
     const { slug } = req.params;
     if (!artikel) {
         next(new NotFoundError('Artikel', `mit slug: '${slug}'`)); 
     } 
-    console.log(auth);
     // if (auth!.id !== artikel!.author!._id.toString()) {
     //     next(new CustomError('Zugriff nur für Autoren beschränkt', 401, 'Unauthorized')); 
     // }
-    const { title, body, description, tags } = req.body;
-    const updated = artikel!.updateWith({ title, body, description, tags });
-    updated!.save()
-    .then(() => res.json(updated?.toJSONFor(null)))
-    .catch(next);
+    try {
+        const { title, body, description, tags } = req.body;
+        // const updated =  await artikel!.updateOne({ title, body, description, tags });
+        // console.log(updated)
+        // res.json(updated);
+        artikel!.title = title;
+        artikel!.body = body;
+        artikel!.description = description;
+        artikel!.tags = tags;
+        await artikel?.save();
+        res.json(artikel?.toJSONFor(null));
+    } catch (error) {
+        next(error);
+    }
+    
 })
 artikel.delete("/:slug",  authorization.required, (req: CustomRequest, res: Response, next: NextFunction) => {
     const {  auth } = req;
@@ -280,14 +289,14 @@ artikel.post("/komment/:slug", authorization.required, async (req: CustomRequest
 })
 artikel.put("/komment/:slug/:kommentId", authorization.required, async (req: CustomRequest, res: Response, next: NextFunction) => {
     const { auth } = req;
-    const { author, body } = req.body;
+    const { body } = req.body;
     const komment = req.komment as KommentPopulatedDocument;
     try {
         const benutzer = await Benutzer.findById(auth?.id);
         if (!benutzer) {
             res.send(new CustomError("Unauthorisierung", 401))
-        } else if (!benutzer?.username !== author) {
-            res.send(new CustomError("Du muss der Author dieses Kommentar sein!", 403, "Unauthorisierungsfehler"))
+        } else if (benutzer?.username !== komment?.author.username) {
+            res.send(new CustomError("You must be the author of this article!", 403, "Forbidden Error"))
         }
         komment!.body = body;
         const populatedKomment = await komment!.save().then((savedKomment) => savedKomment.populate<Pick<IPopulatedKomment, 'author'>>('author'));
@@ -308,7 +317,7 @@ artikel.delete("/komment/:slug/:kommentId", authorization.optional, async (req: 
         if (!benutzer) {
             res.send(new CustomError("Unauthorisierung", 401))
         } else if (!benutzer?.username !== author) {
-            res.send(new CustomError("Du muss der Author dieses Kommentar sein!", 403))
+            res.send(new CustomError("You must be the author of this article!", 403, "Forbidden Error"))
         }
         komment!.deleteOne();
         artikel?.kommentar.remove(komment?.id);

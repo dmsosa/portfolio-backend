@@ -62,7 +62,7 @@ mongoose.connect(DB_URI, options)
     const admin = new Benutzer();
     admin.username = ADMIN.USERNAME;
     admin.email = ADMIN.EMAIL;
-
+    admin.role = 'ADMIN';
     admin.setPassword(ADMIN.PASSWORD);
     admin.save();
     Benutzer.insertMany(benutzerSeed)

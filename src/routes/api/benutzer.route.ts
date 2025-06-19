@@ -6,12 +6,25 @@
 import { NextFunction, Request, Response, Router } from "express";
 
 import passport from "passport";
-import { CustomError, FieldError } from "../../helpers/customErrors";
+import { CustomError, FieldError, NotFoundError } from "../../helpers/customErrors";
 import Benutzer from "../../database/models/benutzer.model";
 import { authorization } from "../../middleware/authorization";
 import { CustomRequest } from "../../interfaces/express";
 import { BenutzerDocument } from "../../interfaces/benutzer.interfaces";
 const benutzer = Router();
+benutzer.param('username', (req: CustomRequest, res: Response, next: NextFunction, username: string) => {
+    Benutzer.findOne({ username })
+    .then((benutzer) => {
+        if (!benutzer) {
+            next(new NotFoundError('Benutzer', `mit username: '${username}'`)); 
+        } else {
+            req.benutzer = benutzer as BenutzerDocument;
+            next();
+        }
+
+    })
+    .catch(next);
+})
 benutzer.get("/", authorization.required, (req: CustomRequest, res: Response, next: NextFunction) => {
     Benutzer.findOne({ _id: req.auth?.id })
     .then((benutzer) => {
@@ -60,20 +73,27 @@ benutzer.post("/", authorization.optional, (req: CustomRequest, res: Response, n
   })
   .catch(next);
 });
-benutzer.put("/", authorization.required, (req: CustomRequest, res: Response, next: NextFunction) => {
+
+benutzer.put("/", authorization.required, async (req: CustomRequest, res: Response, next: NextFunction) => {
   const { auth } = req;
   if (!auth) {
     next(new CustomError('Zugriff nicht beschränkt', 401, 'Unauthorized')); 
   }
-  const { username, email, bio, image } = req.body;
-
-  Benutzer.findOne({ _id: auth!.id })
-  .then((benutzer) => {
-    benutzer!.updateOne({ username, email, bio, image })
-    .then(() => res.json(benutzer?.toAuthJSON()))
-    })
-  .catch(next);
+  try {
+    const { username, email, bio, image } = req.body;
+    const benutzer = await Benutzer.findOne({ _id: auth!.id });
+    benutzer!.username = username;
+    benutzer!.email = email;
+    benutzer!.bio = bio;
+    benutzer!.image = image;
+    await benutzer!.save();
+    res.send(benutzer?.toProfileFor(null))
+  } catch (err) {
+    console.log(err);
+    next(err);
+  }
 });
+
 benutzer.delete("/", authorization.required, (req: CustomRequest, res: Response, next: NextFunction) => {
   const { auth } = req;
   if (!auth) {

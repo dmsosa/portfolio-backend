@@ -8,6 +8,7 @@ export interface CustomRequest extends Request {
   profile?: BenutzerDocument;
   auth?: JwtPayload;
   artikel?: ArtikelPopulatedDocument;
+  benutzer?: BenutzerDocument;
   komment?: KommentPopulatedDocument;
 }
 declare module "jsonwebtoken" {

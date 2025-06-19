@@ -3,6 +3,7 @@ import { BenutzerDocument, BenutzerMethods, BenutzerModel, IAuthJSON, IBenutzer,
 import * as jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../../config/secrets";
 import * as crypto from "crypto";
+import { CallbackWithoutResultAndOptionalError } from "mongoose";
 
 export function sum(a: number, b: number): number {
   return a + b;
@@ -16,13 +17,9 @@ export const benutzerSchema = new Schema<IBenutzer, BenutzerModel, BenutzerMetho
         unique: true,
         match: [/^\w+$/, 'is invalid'],
         index: true,
-        validate: {
-            validator: async (value: string) => {
-                const users = await Benutzer.countDocuments({ username: value}).exec();
-                return users < 2;
-            },
-            message: props => `${props.value} is already taken.`,
-        }
+        minlength: 3,
+        maxlength:30,
+
     },
     email: {
         type: String,
@@ -30,13 +27,7 @@ export const benutzerSchema = new Schema<IBenutzer, BenutzerModel, BenutzerMetho
         unique: true,
         match: [/\S+@\S+\.\S+/, 'ungultig ist'],
         index: true,
-        validate: {
-            validator: async (value: string) => {
-                const users = await Benutzer.countDocuments({ email: value}).exec();
-                return users < 2;
-            },
-            message: props => `${props.value} is already taken.`,
-        }
+        minlength: 3,
     },
     bio      : {
         type: Schema.Types.String,
@@ -79,6 +70,10 @@ export const benutzerSchema = new Schema<IBenutzer, BenutzerModel, BenutzerMetho
         default: 'BENUTZER',
     }
 }, { collection: 'benutzer', timestamps: true });
+
+// benutzerSchema.pre('save', function(this: BenutzerDocument, next: CallbackWithoutResultAndOptionalError): {
+//     next();
+// })
 
 benutzerSchema.method('validatePassword', function(password: string) {
     const hash = crypto.pbkdf2Sync(password, this.salt!, 10000, 512, 'sha512').toString('hex');

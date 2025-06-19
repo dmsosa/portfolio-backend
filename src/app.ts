@@ -35,7 +35,6 @@ if (!IS_PRODUCTION) {
 
 app.listen(PORT, () => {
         logger.info('Das API lauft auf http://localhost:' + PORT);
-        console.log('Das API lauft auf http://localhost:' + PORT);
     }).on('error', (error) => {
     logger.error(error);
     console.log(error);
